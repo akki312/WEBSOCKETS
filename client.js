@@ -10,7 +10,7 @@ const rl = readline.createInterface({
 const ws = new WebSocket('ws://localhost:8080');
 
 let name = '';
-let currentRoom = '';
+let currentRoom = 'akshith';
 
 ws.on('open', () => {
     console.log('Connected to WebSocket server');
