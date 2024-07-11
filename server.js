@@ -9,6 +9,7 @@ const clients = new Map();
 
 wss.on('connection', (ws) => {
     console.log('New client connected');
+    logBufferSize(ws);
 
     ws.on('message', (message) => {
         const parsedMessage = JSON.parse(message);
@@ -44,13 +45,28 @@ wss.on('connection', (ws) => {
     ws.on('error', (error) => {
         console.error('WebSocket error:', error);
     });
+
+    ws.on('drain', () => {
+        console.log('Socket buffer drained');
+        logBufferSize(ws);
+    });
 });
+
+function logBufferSize(ws) {
+    console.log(`Socket buffer size: ${ws.bufferedAmount}`);
+}
 
 function broadcastToRoom(room, data) {
     const message = JSON.stringify(data);
     for (const [client, info] of clients.entries()) {
         if (info.room === room && client.readyState === WebSocket.OPEN) {
-            client.send(message);
+            client.send(message, (error) => {
+                if (error) {
+                    console.error('Send error:', error);
+                } else {
+                    logBufferSize(client);
+                }
+            });
         }
     }
 }
@@ -69,7 +85,13 @@ function broadcast(data) {
     const message = JSON.stringify(data);
     for (const client of clients.keys()) {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(message);
+            client.send(message, (error) => {
+                if (error) {
+                    console.error('Send error:', error);
+                } else {
+                    logBufferSize(client);
+                }
+            });
         }
     }
 }
