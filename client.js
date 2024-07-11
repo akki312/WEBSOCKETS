@@ -1,4 +1,3 @@
-// client.js
 const WebSocket = require('ws');
 const readline = require('readline');
 
@@ -10,14 +9,22 @@ const rl = readline.createInterface({
 const ws = new WebSocket('ws://localhost:8080');
 
 let name = '';
-let currentRoom = 'akshith';
+let currentRoom = '';
 
-ws.on('open', () => {
+// WebSocket event handlers
+ws.on('open', handleOpen);
+ws.on('message', handleMessage);
+ws.on('close', handleClose);
+ws.on('error', handleError);
+
+// Handle WebSocket connection open event
+function handleOpen() {
     console.log('Connected to WebSocket server');
     askName();
-});
+}
 
-ws.on('message', (event) => {
+// Handle WebSocket message event
+function handleMessage(event) {
     const data = JSON.parse(event);
     switch (data.type) {
         case 'userList':
@@ -35,18 +42,21 @@ ws.on('message', (event) => {
         default:
             console.log('Unknown message type:', data.type);
     }
-});
+}
 
-ws.on('close', () => {
+// Handle WebSocket close event
+function handleClose() {
     console.log('Disconnected from WebSocket server');
     rl.close();
-});
+}
 
-ws.on('error', (error) => {
+// Handle WebSocket error event
+function handleError(error) {
     console.error('WebSocket error:', error);
     rl.close();
-});
+}
 
+// Prompt user for their name
 function askName() {
     rl.question('Enter your name: ', (answer) => {
         name = answer;
@@ -55,6 +65,7 @@ function askName() {
     });
 }
 
+// Prompt user for the room to join
 function askRoom() {
     rl.question('Enter room to join: ', (room) => {
         currentRoom = room;
@@ -64,6 +75,7 @@ function askRoom() {
     });
 }
 
+// Chat loop for sending messages
 function chat() {
     rl.question('Enter message: ', (message) => {
         if (message === '/exit') {
@@ -74,3 +86,14 @@ function chat() {
         chat();
     });
 }
+
+// Export WebSocket client methods for external usage if needed
+module.exports = {
+    handleOpen,
+    handleMessage,
+    handleClose,
+    handleError,
+    askName,
+    askRoom,
+    chat
+};
