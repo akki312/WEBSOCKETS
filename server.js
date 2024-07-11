@@ -2,12 +2,14 @@ const WebSocket = require('ws');
 const http = require('http');
 const dgram = require('dgram');
 
+// HTTP server setup
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
-
-const clients = new Map();
 const udpServer = dgram.createSocket('udp4');
 
+const clients = new Map();
+
+// UDP server event handling
 udpServer.on('error', (err) => {
     console.error(`UDP server error:\n${err.stack}`);
     udpServer.close();
@@ -25,6 +27,7 @@ udpServer.on('listening', () => {
 
 udpServer.bind(41234);
 
+// WebSocket server event handling
 wss.on('connection', (ws) => {
     console.log('New client connected');
     logBufferSize(ws);
@@ -70,6 +73,7 @@ wss.on('connection', (ws) => {
     });
 });
 
+// Helper functions
 function logBufferSize(ws) {
     console.log(`Socket buffer size: ${ws.bufferedAmount}`);
 }
@@ -114,6 +118,7 @@ function broadcast(data) {
     }
 }
 
+// Start the HTTP server
 server.listen(8080, () => {
     console.log('Server is listening on http://localhost:8080');
 });

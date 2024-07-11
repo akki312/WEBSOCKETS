@@ -11,20 +11,12 @@ const ws = new WebSocket('ws://localhost:8080');
 let name = '';
 let currentRoom = '';
 
-// WebSocket event handlers
-ws.on('open', handleOpen);
-ws.on('message', handleMessage);
-ws.on('close', handleClose);
-ws.on('error', handleError);
-
-// Handle WebSocket connection open event
-function handleOpen() {
+ws.on('open', () => {
     console.log('Connected to WebSocket server');
     askName();
-}
+});
 
-// Handle WebSocket message event
-function handleMessage(event) {
+ws.on('message', (event) => {
     const data = JSON.parse(event);
     switch (data.type) {
         case 'userList':
@@ -39,24 +31,24 @@ function handleMessage(event) {
         case 'chatMessage':
             console.log(`${data.name}: ${data.message}`);
             break;
+        case 'udpMessage':
+            console.log(`UDP Message: ${data.message}`);
+            break;
         default:
             console.log('Unknown message type:', data.type);
     }
-}
+});
 
-// Handle WebSocket close event
-function handleClose() {
+ws.on('close', () => {
     console.log('Disconnected from WebSocket server');
     rl.close();
-}
+});
 
-// Handle WebSocket error event
-function handleError(error) {
+ws.on('error', (error) => {
     console.error('WebSocket error:', error);
     rl.close();
-}
+});
 
-// Prompt user for their name
 function askName() {
     rl.question('Enter your name: ', (answer) => {
         name = answer;
@@ -65,7 +57,6 @@ function askName() {
     });
 }
 
-// Prompt user for the room to join
 function askRoom() {
     rl.question('Enter room to join: ', (room) => {
         currentRoom = room;
@@ -75,7 +66,6 @@ function askRoom() {
     });
 }
 
-// Chat loop for sending messages
 function chat() {
     rl.question('Enter message: ', (message) => {
         if (message === '/exit') {
@@ -86,14 +76,3 @@ function chat() {
         chat();
     });
 }
-
-// Export WebSocket client methods for external usage if needed
-module.exports = {
-    handleOpen,
-    handleMessage,
-    handleClose,
-    handleError,
-    askName,
-    askRoom,
-    chat
-};
