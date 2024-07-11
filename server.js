@@ -1,11 +1,29 @@
-// server.js
 const WebSocket = require('ws');
 const http = require('http');
+const dgram = require('dgram');
 
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 
 const clients = new Map();
+const udpServer = dgram.createSocket('udp4');
+
+udpServer.on('error', (err) => {
+    console.error(`UDP server error:\n${err.stack}`);
+    udpServer.close();
+});
+
+udpServer.on('message', (msg, rinfo) => {
+    console.log(`UDP server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
+    broadcast({ type: 'udpMessage', message: msg.toString() });
+});
+
+udpServer.on('listening', () => {
+    const address = udpServer.address();
+    console.log(`UDP server listening on ${address.address}:${address.port}`);
+});
+
+udpServer.bind(41234);
 
 wss.on('connection', (ws) => {
     console.log('New client connected');
