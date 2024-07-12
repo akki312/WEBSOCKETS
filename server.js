@@ -39,6 +39,7 @@ wss.on('connection', (ws) => {
             case 'setName':
                 clients.set(ws, { name: parsedMessage.name, room: null });
                 sendUserList();
+                sendRoomList(); // Ensure room list is sent after setting the name
                 break;
             case 'joinRoom':
                 clients.get(ws).room = parsedMessage.room;
@@ -100,7 +101,9 @@ function sendUserList() {
 
 function sendRoomList() {
     const rooms = Array.from(new Set(Array.from(clients.values()).map((info) => info.room)));
-    broadcast({ type: 'roomList', rooms: rooms.filter((room) => room !== null) });
+    const filteredRooms = rooms.filter((room) => room !== null);
+    console.log('Available rooms:', filteredRooms); // Log rooms for debugging
+    broadcast({ type: 'roomList', rooms: filteredRooms });
 }
 
 function broadcast(data) {

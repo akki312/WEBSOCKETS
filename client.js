@@ -17,7 +17,7 @@ ws.on('open', () => {
 });
 
 ws.on('message', (event) => {
-    const data = JSON.parse(event);
+    const data = JSON.parse(event.data);
     switch (data.type) {
         case 'userList':
             console.log('Connected users:', data.users.join(', '));
@@ -32,7 +32,7 @@ ws.on('message', (event) => {
             console.log(`${data.name}: ${data.message}`);
             break;
         case 'udpMessage':
-            console.log(`UDP Message: ${data.message}`);
+            console.log(`UDP message: ${data.message}`);
             break;
         default:
             console.log('Unknown message type:', data.type);
