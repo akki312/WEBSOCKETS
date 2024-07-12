@@ -17,25 +17,29 @@ ws.on('open', () => {
 });
 
 ws.on('message', (event) => {
-    const data = JSON.parse(event.data);
-    switch (data.type) {
-        case 'userList':
-            console.log('Connected users:', data.users.join(', '));
-            break;
-        case 'roomList':
-            console.log('Available rooms:', data.rooms.join(', '));
-            if (!currentRoom) {
-                askRoom();
-            }
-            break;
-        case 'chatMessage':
-            console.log(`${data.name}: ${data.message}`);
-            break;
-        case 'udpMessage':
-            console.log(`UDP message: ${data.message}`);
-            break;
-        default:
-            console.log('Unknown message type:', data.type);
+    try {
+        const data = JSON.parse(event.data);
+        switch (data.type) {
+            case 'userList':
+                console.log('Connected users:', data.users.join(', '));
+                break;
+            case 'roomList':
+                console.log('Available rooms:', data.rooms.join(', '));
+                if (!currentRoom) {
+                    askRoom();
+                }
+                break;
+            case 'chatMessage':
+                console.log(`${data.name}: ${data.message}`);
+                break;
+            case 'udpMessage':
+                console.log(`UDP message: ${data.message}`);
+                break;
+            default:
+                console.log('Unknown message type:', data.type);
+        }
+    } catch (e) {
+        console.error('Failed to parse message as JSON:', e);
     }
 });
 

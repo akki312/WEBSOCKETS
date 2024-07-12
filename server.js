@@ -33,7 +33,13 @@ wss.on('connection', (ws) => {
     logBufferSize(ws);
 
     ws.on('message', (message) => {
-        const parsedMessage = JSON.parse(message);
+        let parsedMessage;
+        try {
+            parsedMessage = JSON.parse(message);
+        } catch (e) {
+            console.error('Failed to parse message as JSON:', e);
+            return;
+        }
 
         switch (parsedMessage.type) {
             case 'setName':
