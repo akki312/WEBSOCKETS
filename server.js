@@ -1,43 +1,24 @@
 const WebSocket = require('ws');
 const http = require('http');
-const dgram = require('dgram');
 
 // HTTP server setup
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
-const udpServer = dgram.createSocket('udp4');
 
 const clients = new Map();
 
-// UDP server event handling
-udpServer.on('error', (err) => {
-    console.error(`UDP server error:\n${err.stack}`);
-    udpServer.close();
-});
-
-udpServer.on('message', (msg, rinfo) => {
-    console.log(`UDP server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
-    broadcast({ type: 'udpMessage', message: msg.toString() });
-});
-
-udpServer.on('listening', () => {
-    const address = udpServer.address();
-    console.log(`UDP server listening on ${address.address}:${address.port}`);
-});
-
-udpServer.bind(41234);
-
-// WebSocket server event handling
 wss.on('connection', (ws) => {
     console.log('New client connected');
-    logBufferSize(ws);
 
     ws.on('message', (message) => {
+        console.log(`Received message: ${message}`);
         let parsedMessage;
+
         try {
             parsedMessage = JSON.parse(message);
-        } catch (e) {
-            console.error('Failed to parse message as JSON:', e);
+        } catch (error) {
+            console.error('Failed to parse message as JSON:', error);
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
             return;
         }
 
@@ -45,7 +26,9 @@ wss.on('connection', (ws) => {
             case 'setName':
                 clients.set(ws, { name: parsedMessage.name, room: null });
                 sendUserList();
-                sendRoomList(); // Ensure room list is sent after setting the name
+                break;
+            case 'getRooms':
+                sendRoomList(ws);
                 break;
             case 'joinRoom':
                 clients.get(ws).room = parsedMessage.room;
@@ -73,43 +56,22 @@ wss.on('connection', (ws) => {
     ws.on('error', (error) => {
         console.error('WebSocket error:', error);
     });
-
-    ws.on('drain', () => {
-        console.log('Socket buffer drained');
-        logBufferSize(ws);
-    });
 });
-
-// Helper functions
-function logBufferSize(ws) {
-    console.log(`Socket buffer size: ${ws.bufferedAmount}`);
-}
-
-function broadcastToRoom(room, data) {
-    const message = JSON.stringify(data);
-    for (const [client, info] of clients.entries()) {
-        if (info.room === room && client.readyState === WebSocket.OPEN) {
-            client.send(message, (error) => {
-                if (error) {
-                    console.error('Send error:', error);
-                } else {
-                    logBufferSize(client);
-                }
-            });
-        }
-    }
-}
 
 function sendUserList() {
     const users = Array.from(clients.values()).map((info) => info.name);
     broadcast({ type: 'userList', users });
 }
 
-function sendRoomList() {
+function sendRoomList(ws = null) {
     const rooms = Array.from(new Set(Array.from(clients.values()).map((info) => info.room)));
-    const filteredRooms = rooms.filter((room) => room !== null);
-    console.log('Available rooms:', filteredRooms); // Log rooms for debugging
-    broadcast({ type: 'roomList', rooms: filteredRooms });
+    const message = JSON.stringify({ type: 'roomList', rooms: rooms.filter((room) => room !== null) });
+
+    if (ws) {
+        ws.send(message);
+    } else {
+        broadcast({ type: 'roomList', rooms: rooms.filter((room) => room !== null) });
+    }
 }
 
 function broadcast(data) {
@@ -119,15 +81,12 @@ function broadcast(data) {
             client.send(message, (error) => {
                 if (error) {
                     console.error('Send error:', error);
-                } else {
-                    logBufferSize(client);
                 }
             });
         }
     }
 }
 
-// Start the HTTP server
 server.listen(8080, () => {
     console.log('Server is listening on http://localhost:8080');
 });
