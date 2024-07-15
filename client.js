@@ -15,9 +15,6 @@ ws.on('open', () => {
     rl.question('Enter your name: ', (name) => {
         ws.send(JSON.stringify({ type: 'setName', name: name }));
     });
-
-    // Request the room list after setting the name
-    ws.send(JSON.stringify({ type: 'getRooms' }));
 });
 
 ws.on('message', (message) => {
@@ -35,6 +32,11 @@ ws.on('message', (message) => {
                 break;
             case 'chatMessage':
                 console.log(`${parsedMessage.name}: ${parsedMessage.message}`);
+                break;
+            case 'nameAcknowledged':
+                console.log('Name set successfully.');
+                // Request the room list after setting the name is acknowledged
+                ws.send(JSON.stringify({ type: 'getRooms' }));
                 break;
             default:
                 console.log('Unknown message type:', parsedMessage.type);

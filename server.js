@@ -27,6 +27,10 @@ wss.on('connection', (ws) => {
                 clients.set(ws, { name: parsedMessage.name, room: null });
                 sendUserList();
                 break;
+            case 'createrooms':
+                clients.set(ws, {name: parsedMessage.name, room:null});
+                createrooms();
+                break;
             case 'getRooms':
                 sendRoomList(ws);
                 break;
@@ -51,6 +55,7 @@ wss.on('connection', (ws) => {
         clients.delete(ws);
         sendUserList();
         sendRoomList();
+        createrooms();
     });
 
     ws.on('error', (error) => {
