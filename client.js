@@ -15,6 +15,16 @@ ws.on('open', () => {
     rl.question('Enter your name: ', (name) => {
         ws.send(JSON.stringify({ type: 'setName', name: name }));
     });
+
+    rl.question('Enter the name of the room to create: ', (roomName) => {
+        ws.send(JSON.stringify({ type: 'createrooms', roomName: roomName }));
+    });
+
+    ws.send(JSON.stringify({ type: 'getRooms' }));
+
+    rl.on('line', (input) => {
+        ws.send(JSON.stringify({ type: 'chatMessage', message: input }));
+    });
 });
 
 ws.on('message', (message) => {
@@ -33,10 +43,8 @@ ws.on('message', (message) => {
             case 'chatMessage':
                 console.log(`${parsedMessage.name}: ${parsedMessage.message}`);
                 break;
-            case 'nameAcknowledged':
-                console.log('Name set successfully.');
-                // Request the room list after setting the name is acknowledged
-                ws.send(JSON.stringify({ type: 'getRooms' }));
+            case 'error':
+                console.error('Error:', parsedMessage.message);
                 break;
             default:
                 console.log('Unknown message type:', parsedMessage.type);

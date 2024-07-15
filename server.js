@@ -91,6 +91,19 @@ function broadcast(data) {
     }
 }
 
+function broadcastToRoom(room, data) {
+    const message = JSON.stringify(data);
+    for (const [client, info] of clients.entries()) {
+        if (info.room === room && client.readyState === WebSocket.OPEN) {
+            client.send(message, (error) => {
+                if (error) {
+                    console.error('Send error:', error);
+                }
+            });
+        }
+    }
+}
+
 function createrooms(roomName) {
     const rooms = Array.from(new Set(Array.from(clients.values()).map((info) => info.room)));
     if (rooms.includes(roomName)) {
@@ -98,8 +111,6 @@ function createrooms(roomName) {
         return;
     }
 
-    // Adding a room by associating it with a client
-    // Here we assume that the first client requesting to create the room is its owner
     const client = Array.from(clients.keys()).find(ws => clients.get(ws).name);
     if (client) {
         clients.get(client).room = roomName;
