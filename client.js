@@ -14,15 +14,13 @@ ws.on('open', () => {
 
     rl.question('Enter your name: ', (name) => {
         ws.send(JSON.stringify({ type: 'setName', name: name }));
-    });
 
-    rl.question('Enter the name of the room to create: ', (roomName) => {
-        ws.send(JSON.stringify({ type: 'createrooms', roomName: roomName }));
+        // Request the list of rooms after setting the name
+        ws.send(JSON.stringify({ type: 'getRooms' }));
     });
-
-    ws.send(JSON.stringify({ type: 'getRooms' }));
 
     rl.on('line', (input) => {
+        // Assume user inputs messages directly for chat
         ws.send(JSON.stringify({ type: 'chatMessage', message: input }));
     });
 });
@@ -39,6 +37,12 @@ ws.on('message', (message) => {
                 break;
             case 'roomList':
                 console.log('Room list:', parsedMessage.rooms);
+                rl.question('Enter the name of the room to join: ', (roomName) => {
+                    ws.send(JSON.stringify({ type: 'joinRoom', room: roomName }));
+                });
+                break;
+            case 'roomJoined':
+                console.log(`Joined room: ${parsedMessage.room}`);
                 break;
             case 'chatMessage':
                 console.log(`${parsedMessage.name}: ${parsedMessage.message}`);

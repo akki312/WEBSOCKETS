@@ -35,8 +35,7 @@ wss.on('connection', (ws) => {
                 sendRoomList(ws);
                 break;
             case 'joinRoom':
-                clients.get(ws).room = parsedMessage.room;
-                sendRoomList();
+                joinRoom(ws, parsedMessage.room);
                 break;
             case 'chatMessage':
                 broadcastToRoom(clients.get(ws).room, {
@@ -116,6 +115,14 @@ function createrooms(roomName) {
         clients.get(client).room = roomName;
         console.log(`Room ${roomName} created by ${clients.get(client).name}`);
         broadcast({ type: 'roomCreated', roomName });
+        sendRoomList();
+    }
+}
+
+function joinRoom(ws, roomName) {
+    if (clients.has(ws)) {
+        clients.get(ws).room = roomName;
+        ws.send(JSON.stringify({ type: 'roomJoined', room: roomName }));
         sendRoomList();
     }
 }
