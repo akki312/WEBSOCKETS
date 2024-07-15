@@ -1,9 +1,9 @@
 const WebSocket = require('ws');
 const http = require('http');
 
-// HTTP server setup
+// Set the maximum payload size to 10 MB (you can adjust this value as needed)
 const server = http.createServer();
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server, maxPayload: 10 * 1024 * 1024 });
 
 const clients = new Map();
 

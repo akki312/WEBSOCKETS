@@ -1,8 +1,10 @@
 const WebSocket = require('ws');
 const readline = require('readline');
 
-// Connect to the WebSocket server
-const ws = new WebSocket('ws://localhost:8080');
+// Set the maximum payload size to 10 MB (you can adjust this value as needed)
+const ws = new WebSocket('ws://localhost:8080', {
+    maxPayload: 10 * 1024 * 1024 // 10 MB
+});
 
 const rl = readline.createInterface({
     input: process.stdin,
