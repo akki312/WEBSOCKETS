@@ -92,21 +92,21 @@ function broadcast(data) {
 }
 
 function createrooms(roomName) {
-    // Check if the room already exists
     const rooms = Array.from(new Set(Array.from(clients.values()).map((info) => info.room)));
     if (rooms.includes(roomName)) {
         console.log(`Room ${roomName} already exists`);
         return;
     }
 
-    // If the room doesn't exist, create it
-    // To "create" a room, we just need to ensure at least one client joins it
-    // Here we assume rooms are created when a client joins or names it
-    
-    // This example function simply triggers an update to all clients
-    // In practice, you would have more logic here to handle room creation
-    broadcast({ type: 'roomCreated', roomName });
-    sendRoomList();
+    // Adding a room by associating it with a client
+    // Here we assume that the first client requesting to create the room is its owner
+    const client = Array.from(clients.keys()).find(ws => clients.get(ws).name);
+    if (client) {
+        clients.get(client).room = roomName;
+        console.log(`Room ${roomName} created by ${clients.get(client).name}`);
+        broadcast({ type: 'roomCreated', roomName });
+        sendRoomList();
+    }
 }
 
 server.listen(8080, () => {
