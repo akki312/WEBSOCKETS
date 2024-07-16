@@ -49,6 +49,9 @@ ws.on('message', (message) => {
             case 'chatMessage':
                 console.log(`${parsedMessage.name}: ${parsedMessage.message}`);
                 break;
+            case 'welcome':
+                console.log(`Server: ${parsedMessage.message}`);
+                break;
             case 'error':
                 console.error('Error:', parsedMessage.message);
                 break;

@@ -75,6 +75,9 @@ wss.on('connection', (ws) => {
     ws.on('error', (error) => {
         console.error(`WebSocket error: ${error}`);
     });
+
+    // Send a message to the client upon connection
+    sendMessageToClient(ws, { type: 'serverMessage', message: 'Welcome to the server!' });
 });
 
 // Create a UDP socket
