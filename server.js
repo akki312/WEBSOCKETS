@@ -1,129 +1,119 @@
 const WebSocket = require('ws');
-const http = require('http');
+const dgram = require('dgram');
 
-// Set the maximum payload size to 10 MB (you can adjust this value as needed)
-const server = http.createServer();
-const wss = new WebSocket.Server({ server, maxPayload: 10 * 1024 * 1024 });
+// Create a WebSocket Server
+const wss = new WebSocket.Server({ port: 8080 });
 
+// Keep track of connected clients and their names
 const clients = new Map();
-const rooms = new Set(); // Use a Set to store unique room names
 
+// Broadcast function to send messages to all connected clients
+function broadcast(data) {
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
+
+// Function to send a message to a specific client
+function sendMessageToClient(client, data) {
+    if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(data));
+    }
+}
+
+// Handle WebSocket connection
 wss.on('connection', (ws) => {
-    console.log('New client connected');
+    console.log('A new client connected');
 
     ws.on('message', (message) => {
-        console.log(`Received message: ${message}`);
-        let parsedMessage;
-
+        console.log(`Raw message received from client: ${message}`);
         try {
-            parsedMessage = JSON.parse(message);
-        } catch (error) {
-            console.error('Failed to parse message as JSON:', error);
-            ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
-            return;
-        }
+            const parsedMessage = JSON.parse(message);
+            console.log('Parsed message from client:', parsedMessage);
 
-        switch (parsedMessage.type) {
-            case 'setName':
-                clients.set(ws, { name: parsedMessage.name, room: null });
-                sendUserList();
-                ws.send(JSON.stringify({ type: 'nameAcknowledged' }));
-                break;
-            case 'createrooms':
-                createrooms(ws, parsedMessage.roomName);
-                break;
-            case 'getRooms':
-                sendRoomList(ws);
-                break;
-            case 'joinRoom':
-                joinRoom(ws, parsedMessage.room);
-                break;
-            case 'chatMessage':
-                broadcastToRoom(clients.get(ws).room, {
-                    type: 'chatMessage',
-                    name: clients.get(ws).name,
-                    message: parsedMessage.message,
-                });
-                break;
-            default:
-                console.log('Unknown message type:', parsedMessage.type);
+            switch (parsedMessage.type) {
+                case 'setName':
+                    clients.set(ws, { name: parsedMessage.name });
+                    broadcast({ type: 'userList', users: Array.from(clients.values()).map(client => client.name) });
+                    break;
+                case 'getRooms':
+                    // For simplicity, we assume there are predefined rooms
+                    const rooms = ['room1', 'room2', 'room3'];
+                    ws.send(JSON.stringify({ type: 'roomList', rooms: rooms }));
+                    break;
+                case 'joinRoom':
+                    const client = clients.get(ws);
+                    if (client) {
+                        client.room = parsedMessage.room;
+                        ws.send(JSON.stringify({ type: 'roomJoined', room: parsedMessage.room }));
+                        // Send a welcome message to the client who joined the room
+                        sendMessageToClient(ws, { type: 'welcome', message: `Welcome to ${parsedMessage.room}, ${client.name}!` });
+                    }
+                    break;
+                case 'chatMessage':
+                    const sender = clients.get(ws);
+                    if (sender) {
+                        broadcast({ type: 'chatMessage', name: sender.name, message: parsedMessage.message });
+                    }
+                    break;
+                default:
+                    console.log('Unknown message type from client:', parsedMessage.type);
+            }
+        } catch (error) {
+            console.error('Failed to parse message from client as JSON:', error);
         }
     });
 
     ws.on('close', () => {
         console.log('Client disconnected');
         clients.delete(ws);
-        sendUserList();
-        sendRoomList();
+        broadcast({ type: 'userList', users: Array.from(clients.values()).map(client => client.name) });
     });
 
     ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
+        console.error(`WebSocket error: ${error}`);
     });
 });
 
-function sendUserList() {
-    const users = Array.from(clients.values()).map((info) => info.name);
-    broadcast({ type: 'userList', users });
-}
+// Create a UDP socket
+const udpSocket = dgram.createSocket('udp4');
 
-function sendRoomList(ws = null) {
-    const message = JSON.stringify({ type: 'roomList', rooms: Array.from(rooms) });
-
-    if (ws) {
-        ws.send(message);
-    } else {
-        broadcast({ type: 'roomList', rooms: Array.from(rooms) });
-    }
-}
-
-function broadcast(data) {
-    const message = JSON.stringify(data);
-    for (const client of clients.keys()) {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(message, (error) => {
-                if (error) {
-                    console.error('Send error:', error);
-                }
-            });
-        }
-    }
-}
-
-function broadcastToRoom(room, data) {
-    const message = JSON.stringify(data);
-    for (const [client, info] of clients.entries()) {
-        if (info.room === room && client.readyState === WebSocket.OPEN) {
-            client.send(message, (error) => {
-                if (error) {
-                    console.error('Send error:', error);
-                }
-            });
-        }
-    }
-}
-
-function createrooms(ws, roomName) {
-    if (rooms.has(roomName)) {
-        ws.send(JSON.stringify({ type: 'error', message: `Room ${roomName} already exists` }));
-        return;
-    }
-
-    rooms.add(roomName);
-    ws.send(JSON.stringify({ type: 'roomCreated', roomName }));
-    sendRoomList();
-}
-
-function joinRoom(ws, roomName) {
-    if (rooms.has(roomName)) {
-        clients.get(ws).room = roomName;
-        ws.send(JSON.stringify({ type: 'roomJoined', room: roomName }));
-        sendRoomList();
-    } else {
-        ws.send(JSON.stringify({ type: 'error', message: `Room ${roomName} does not exist` }));
-    }
-}
-
-server.listen(8080, () => {
-    console.log('Server is listening on http://localhost:8080');
+// UDP socket event listeners
+udpSocket.on('message', (msg, rinfo) => {
+    console.log(`UDP message received from ${rinfo.address}:${rinfo.port} - ${msg}`);
 });
+
+udpSocket.on('listening', () => {
+    const address = udpSocket.address();
+    console.log(`UDP socket listening on ${address.address}:${address.port}`);
+});
+
+udpSocket.on('error', (error) => {
+    console.error(`UDP socket error: ${error}`);
+    udpSocket.close();
+});
+
+udpSocket.on('close', () => {
+    console.log('UDP socket closed');
+});
+
+// Bind UDP socket to a port
+udpSocket.bind(41234);
+
+// Function to send UDP messages
+function sendUdpMessage(message, port, address) {
+    udpSocket.send(message, port, address, (error) => {
+        if (error) {
+            console.error(`UDP message send error: ${error}`);
+        } else {
+            console.log(`UDP message sent to ${address}:${port}`);
+        }
+    });
+}
+
+// Example of sending a UDP message
+sendUdpMessage('Hello UDP server', 41234, 'localhost');
+
+console.log('WebSocket server started on port 8080');
