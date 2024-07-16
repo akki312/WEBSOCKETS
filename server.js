@@ -6,6 +6,7 @@ const server = http.createServer();
 const wss = new WebSocket.Server({ server, maxPayload: 10 * 1024 * 1024 });
 
 const clients = new Map();
+const rooms = new Set(); // Use a Set to store unique room names
 
 wss.on('connection', (ws) => {
     console.log('New client connected');
@@ -29,7 +30,7 @@ wss.on('connection', (ws) => {
                 ws.send(JSON.stringify({ type: 'nameAcknowledged' }));
                 break;
             case 'createrooms':
-                createrooms(parsedMessage.roomName);
+                createrooms(ws, parsedMessage.roomName);
                 break;
             case 'getRooms':
                 sendRoomList(ws);
@@ -67,13 +68,12 @@ function sendUserList() {
 }
 
 function sendRoomList(ws = null) {
-    const rooms = Array.from(new Set(Array.from(clients.values()).map((info) => info.room)));
-    const message = JSON.stringify({ type: 'roomList', rooms: rooms.filter((room) => room !== null) });
+    const message = JSON.stringify({ type: 'roomList', rooms: Array.from(rooms) });
 
     if (ws) {
         ws.send(message);
     } else {
-        broadcast({ type: 'roomList', rooms: rooms.filter((room) => room !== null) });
+        broadcast({ type: 'roomList', rooms: Array.from(rooms) });
     }
 }
 
@@ -103,27 +103,24 @@ function broadcastToRoom(room, data) {
     }
 }
 
-function createrooms(roomName) {
-    const rooms = Array.from(new Set(Array.from(clients.values()).map((info) => info.room)));
-    if (rooms.includes(roomName)) {
-        console.log(`Room ${roomName} already exists`);
+function createrooms(ws, roomName) {
+    if (rooms.has(roomName)) {
+        ws.send(JSON.stringify({ type: 'error', message: `Room ${roomName} already exists` }));
         return;
     }
 
-    const client = Array.from(clients.keys()).find(ws => clients.get(ws).name);
-    if (client) {
-        clients.get(client).room = roomName;
-        console.log(`Room ${roomName} created by ${clients.get(client).name}`);
-        broadcast({ type: 'roomCreated', roomName });
-        sendRoomList();
-    }
+    rooms.add(roomName);
+    ws.send(JSON.stringify({ type: 'roomCreated', roomName }));
+    sendRoomList();
 }
 
 function joinRoom(ws, roomName) {
-    if (clients.has(ws)) {
+    if (rooms.has(roomName)) {
         clients.get(ws).room = roomName;
         ws.send(JSON.stringify({ type: 'roomJoined', room: roomName }));
         sendRoomList();
+    } else {
+        ws.send(JSON.stringify({ type: 'error', message: `Room ${roomName} does not exist` }));
     }
 }
 

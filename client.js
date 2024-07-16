@@ -1,10 +1,14 @@
 const WebSocket = require('ws');
+const dgram = require('dgram');
 const readline = require('readline');
 
 // Set the maximum payload size to 10 MB (you can adjust this value as needed)
 const ws = new WebSocket('ws://localhost:8080', {
     maxPayload: 10 * 1024 * 1024 // 10 MB
 });
+
+// Create a UDP socket
+const udpSocket = dgram.createSocket('udp4');
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -67,3 +71,39 @@ ws.on('close', () => {
 ws.on('error', (error) => {
     console.error(`WebSocket error: ${error}`);
 });
+
+// UDP socket event listeners
+udpSocket.on('message', (msg, rinfo) => {
+    console.log(`UDP message received from ${rinfo.address}:${rinfo.port} - ${msg}`);
+});
+
+udpSocket.on('listening', () => {
+    const address = udpSocket.address();
+    console.log(`UDP socket listening on ${address.address}:${address.port}`);
+});
+
+udpSocket.on('error', (error) => {
+    console.error(`UDP socket error: ${error}`);
+    udpSocket.close();
+});
+
+udpSocket.on('close', () => {
+    console.log('UDP socket closed');
+});
+
+// Bind UDP socket to a port (you can choose an appropriate port)
+udpSocket.bind(41234);
+
+// Function to send UDP messages
+function sendUdpMessage(message, port, address) {
+    udpSocket.send(message, port, address, (error) => {
+        if (error) {
+            console.error(`UDP message send error: ${error}`);
+        } else {
+            console.log(`UDP message sent to ${address}:${port}`);
+        }
+    });
+}
+
+// Example of sending a UDP message
+sendUdpMessage('Hello UDP server', 41234, 'localhost');
