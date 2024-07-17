@@ -17,7 +17,7 @@ ws.on('open', () => {
     rl.question('Enter your name: ', (name) => {
         ws.send(JSON.stringify({ type: 'setName', name: name }));
 
-        // Request the list of rooms after setting the name
+        
         ws.send(JSON.stringify({ type: 'getRooms' }));
     });
 
