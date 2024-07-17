@@ -1,13 +1,13 @@
 const WebSocket = require('ws');
 const dgram = require('dgram');
 
-
+// Create a WebSocket server on port 8080
 const wss = new WebSocket.Server({ port: 8080 });
 
-
+// Map to store client connections and their associated information
 const clients = new Map();
 
-
+// Function to broadcast a message to all connected WebSocket clients
 function broadcast(data) {
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
@@ -16,14 +16,14 @@ function broadcast(data) {
     });
 }
 
-
+// Function to send a message to a specific WebSocket client
 function sendMessageToClient(client, data) {
     if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(data));
     }
 }
 
-
+// WebSocket server event handlers
 wss.on('connection', (ws) => {
     console.log('A new client connected');
 
@@ -39,7 +39,6 @@ wss.on('connection', (ws) => {
                     broadcast({ type: 'userList', users: Array.from(clients.values()).map(client => client.name) });
                     break;
                 case 'getRooms':
-                    
                     const rooms = ['room1', 'room2', 'room3'];
                     ws.send(JSON.stringify({ type: 'roomList', rooms: rooms }));
                     break;
@@ -48,7 +47,6 @@ wss.on('connection', (ws) => {
                     if (client) {
                         client.room = parsedMessage.room;
                         ws.send(JSON.stringify({ type: 'roomJoined', room: parsedMessage.room }));
-                        
                         sendMessageToClient(ws, { type: 'welcome', message: `Welcome to ${parsedMessage.room}, ${client.name}!` });
                     }
                     break;
@@ -57,6 +55,9 @@ wss.on('connection', (ws) => {
                     if (sender) {
                         broadcast({ type: 'chatMessage', name: sender.name, message: parsedMessage.message });
                     }
+                    break;
+                case 'exit':
+                    ws.close();
                     break;
                 default:
                     console.log('Unknown message type from client:', parsedMessage.type);
@@ -76,14 +77,14 @@ wss.on('connection', (ws) => {
         console.error(`WebSocket error: ${error}`);
     });
 
-    
+    // Send a welcome message to the newly connected client
     sendMessageToClient(ws, { type: 'serverMessage', message: 'Welcome to the server!' });
 });
 
-
+// Create a UDP socket
 const udpSocket = dgram.createSocket('udp4');
 
-
+// UDP socket event handlers
 udpSocket.on('message', (msg, rinfo) => {
     console.log(`UDP message received from ${rinfo.address}:${rinfo.port} - ${msg}`);
 });

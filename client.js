@@ -1,9 +1,9 @@
 const WebSocket = require('ws');
 const readline = require('readline');
 
-
+// Connect to the WebSocket server
 const ws = new WebSocket('ws://localhost:8080', {
-    maxPayload: 10 * 1024 * 1024 
+    maxPayload: 10 * 1024 * 1024 // 10 MB
 });
 
 const rl = readline.createInterface({
@@ -17,13 +17,19 @@ ws.on('open', () => {
     rl.question('Enter your name: ', (name) => {
         ws.send(JSON.stringify({ type: 'setName', name: name }));
 
-        
+        // Request the list of rooms after setting the name
         ws.send(JSON.stringify({ type: 'getRooms' }));
     });
 
     rl.on('line', (input) => {
-       
-        ws.send(JSON.stringify({ type: 'chatMessage', message: input }));
+        if (input.toLowerCase() === 'exit') {
+            ws.send(JSON.stringify({ type: 'exit' }));
+            rl.close();
+            ws.close();
+        } else {
+            // Assume user inputs messages directly for chat
+            ws.send(JSON.stringify({ type: 'chatMessage', message: input }));
+        }
     });
 });
 
