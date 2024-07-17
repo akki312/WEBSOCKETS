@@ -1,13 +1,13 @@
 const WebSocket = require('ws');
 const dgram = require('dgram');
 
-// Create a WebSocket Server
+
 const wss = new WebSocket.Server({ port: 8080 });
 
-// Keep track of connected clients and their names
+
 const clients = new Map();
 
-// Broadcast function to send messages to all connected clients
+
 function broadcast(data) {
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
@@ -16,14 +16,14 @@ function broadcast(data) {
     });
 }
 
-// Function to send a message to a specific client
+
 function sendMessageToClient(client, data) {
     if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(data));
     }
 }
 
-// Handle WebSocket connection
+
 wss.on('connection', (ws) => {
     console.log('A new client connected');
 
@@ -39,7 +39,7 @@ wss.on('connection', (ws) => {
                     broadcast({ type: 'userList', users: Array.from(clients.values()).map(client => client.name) });
                     break;
                 case 'getRooms':
-                    // For simplicity, we assume there are predefined rooms
+                    
                     const rooms = ['room1', 'room2', 'room3'];
                     ws.send(JSON.stringify({ type: 'roomList', rooms: rooms }));
                     break;
@@ -48,7 +48,7 @@ wss.on('connection', (ws) => {
                     if (client) {
                         client.room = parsedMessage.room;
                         ws.send(JSON.stringify({ type: 'roomJoined', room: parsedMessage.room }));
-                        // Send a welcome message to the client who joined the room
+                        
                         sendMessageToClient(ws, { type: 'welcome', message: `Welcome to ${parsedMessage.room}, ${client.name}!` });
                     }
                     break;
@@ -76,14 +76,14 @@ wss.on('connection', (ws) => {
         console.error(`WebSocket error: ${error}`);
     });
 
-    // Send a message to the client upon connection
+    
     sendMessageToClient(ws, { type: 'serverMessage', message: 'Welcome to the server!' });
 });
 
-// Create a UDP socket
+
 const udpSocket = dgram.createSocket('udp4');
 
-// UDP socket event listeners
+
 udpSocket.on('message', (msg, rinfo) => {
     console.log(`UDP message received from ${rinfo.address}:${rinfo.port} - ${msg}`);
 });

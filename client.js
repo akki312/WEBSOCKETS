@@ -1,9 +1,9 @@
 const WebSocket = require('ws');
 const readline = require('readline');
 
-// Set the maximum payload size to 10 MB (you can adjust this value as needed)
+
 const ws = new WebSocket('ws://localhost:8080', {
-    maxPayload: 10 * 1024 * 1024 // 10 MB
+    maxPayload: 10 * 1024 * 1024 
 });
 
 const rl = readline.createInterface({
@@ -22,7 +22,7 @@ ws.on('open', () => {
     });
 
     rl.on('line', (input) => {
-        // Assume user inputs messages directly for chat
+       
         ws.send(JSON.stringify({ type: 'chatMessage', message: input }));
     });
 });
