@@ -20,6 +20,8 @@ function broadcast(data) {
 function sendMessageToClient(client, data) {
     if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(data));
+    } else {
+        console.error('Client is not open:', client.readyState);
     }
 }
 
@@ -40,13 +42,13 @@ wss.on('connection', (ws) => {
                     break;
                 case 'getRooms':
                     const rooms = ['room1', 'room2', 'room3'];
-                    ws.send(JSON.stringify({ type: 'roomList', rooms: rooms }));
+                    sendMessageToClient(ws, { type: 'roomList', rooms: rooms });
                     break;
                 case 'joinRoom':
                     const client = clients.get(ws);
                     if (client) {
                         client.room = parsedMessage.room;
-                        ws.send(JSON.stringify({ type: 'roomJoined', room: parsedMessage.room }));
+                        sendMessageToClient(ws, { type: 'roomJoined', room: parsedMessage.room });
                         sendMessageToClient(ws, { type: 'welcome', message: `Welcome to ${parsedMessage.room}, ${client.name}!` });
                     }
                     break;
@@ -84,6 +86,10 @@ wss.on('connection', (ws) => {
 // Create a UDP socket
 const udpSocket = dgram.createSocket('udp4');
 
+// UDP multicast group and port
+const MULTICAST_GROUP = '239.255.255.250';
+const MULTICAST_PORT = 41234;
+
 // UDP socket event handlers
 udpSocket.on('message', (msg, rinfo) => {
     console.log(`UDP message received from ${rinfo.address}:${rinfo.port} - ${msg}`);
@@ -92,6 +98,12 @@ udpSocket.on('message', (msg, rinfo) => {
 udpSocket.on('listening', () => {
     const address = udpSocket.address();
     console.log(`UDP socket listening on ${address.address}:${address.port}`);
+
+    // Join the multicast group
+    udpSocket.addMembership(MULTICAST_GROUP);
+
+    // Enable multicast loopback
+    udpSocket.setMulticastLoopback(true);
 });
 
 udpSocket.on('error', (error) => {
@@ -104,7 +116,7 @@ udpSocket.on('close', () => {
 });
 
 // Bind UDP socket to a port
-udpSocket.bind(41234);
+udpSocket.bind(MULTICAST_PORT);
 
 // Function to send UDP messages
 function sendUdpMessage(message, port, address) {
@@ -118,6 +130,6 @@ function sendUdpMessage(message, port, address) {
 }
 
 // Example of sending a UDP message
-sendUdpMessage('Hello UDP server', 41234, 'localhost');
+sendUdpMessage('Hello UDP server', MULTICAST_PORT, MULTICAST_GROUP);
 
 console.log('WebSocket server started on port 8080');
